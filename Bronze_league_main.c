@@ -73,25 +73,25 @@ int	is_in_range(int target_x, int target_y, int mark_x, int mark_y, int radius)
 	return (0);
 }
 
-float	get_distance(int target_x, int target_y, int mark_x, int mark_y, int radius)
-{
-	float	distance_sqrt;
-	float	distance;
+// float	get_distance(int target_x, int target_y, int mark_x, int mark_y, int radius)
+// {
+// 	float	distance_sqrt;
+// 	float	distance;
 
-	distance_sqrt = sqrtf(square_distance(target_x, target_y, mark_x, mark_y));
-	distance = distance_sqrt - radius;
-	return (distance);
-}
+// 	distance_sqrt = sqrtf(square_distance(target_x, target_y, mark_x, mark_y));
+// 	distance = distance_sqrt - radius;
+// 	return (distance);
+// }
 
-int	get_closest_to_base(t_base *base, t_entity *entity_one, t_entity *entity_two)
-{
-	float	distance_one = get_distance(entity_one->x, entity_one->y, base->x, base->y, 5000);
-	float	distance_two = get_distance(entity_two->x, entity_two->y, base->x, base->y, 5000);
+// int	get_closest_to_base(t_base *base, t_entity *entity_one, t_entity *entity_two)
+// {
+// 	float	distance_one = get_distance(entity_one->x, entity_one->y, base->x, base->y, 5000);
+// 	float	distance_two = get_distance(entity_two->x, entity_two->y, base->x, base->y, 5000);
 
-	if (distance_one <= distance_two)
-		return (entity_one->id);
-	return (entity_two->id);
-}
+// 	if (distance_one <= distance_two)
+// 		return (entity_one->id);
+// 	return (entity_two->id);
+// }
 
 int	move_to_base(t_base *base, int x, int y)
 {
@@ -146,29 +146,15 @@ int	count_entity_in_range(t_base *base, t_entity *entity, int mark_x, int mark_y
 
 int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
 {
-	int	idt = -1;
-
 	if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && hero->mana > 10)
 		return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 	for (int i = 0; i < base->entity_count; i++)
 	{
 		if (entity[i].type == 0 && is_in_range(entity[i].x, entity[i].y, base->x, base->y, 5000))
 		{
-			for (int j = 0; j < base->entity_count; j++)
-			{
-				if (entity[j].type == 0 && is_in_range(entity[j].x, entity[j].y, base->x, base->y, 5000))
-				{
-					if (idt == -1)
-						idt = entity[j].id;
-					else
-						idt = get_closest_to_base(base, &entity[j], &entity[idt]);
-				}
-			}
-			if (entity[idt].type == 0 && is_in_range(entity[idt].x, entity[idt].y, base->x, base->y, 2500) && is_in_range(entity[idt].x, entity[idt].y, hero->x, hero->y, 1280) && hero->mana > 10)
+			if (entity[i].type == 0 && is_in_range(entity[i].x, entity[i].y, base->x, base->y, 2500) && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
-			else if (idt > -1 && entity[idt].type == 0)
-				return (printf("MOVE %d %d GRRRBBB\n", entity[idt].x, entity[idt].y));
-			return (printf("MOVE %d %d GRRRAAA\n", entity[i].x, entity[i].y));
+			return (printf("MOVE %d %d GRRR\n", entity[i].x, entity[i].y));
 		}
 		else if (entity[i].type == 2)
 		{
@@ -181,29 +167,15 @@ int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
 
 int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
 {
-	int	idt = -1;
-
 	if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && hero->mana > 10)
 		return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 	for (int i = 0; i < base->entity_count; i++)
 	{
 		if (entity[i].type == 0 && is_in_range(entity[i].x, entity[i].y, base->x, base->y, 5000))
 		{
-			for (int j = 0; j < base->entity_count; j++)
-			{
-				if (entity[j].type == 0 && is_in_range(entity[j].x, entity[j].y, base->x, base->y, 5000))
-				{
-					if (idt == -1)
-						idt = entity[j].id;
-					else
-						idt = get_closest_to_base(base, &entity[j], &entity[idt]);
-				}
-			}
-			if (is_in_range(entity[idt].x, entity[idt].y, base->x, base->y, 2500) && is_in_range(entity[idt].x, entity[idt].y, hero->x, hero->y, 1280) && hero->mana > 10)
+			if (is_in_range(entity[i].x, entity[i].y, base->x, base->y, 2500) && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
-			else if (idt > -1 && entity[idt].type == 0)
-				return (printf("MOVE %d %d GRRRBBBB\n", entity[idt].x, entity[idt].y));
-			return (printf("MOVE %d %d GRRRAAA\n", entity[i].x, entity[i].y));
+			return (printf("MOVE %d %d GRRR\n", entity[i].x, entity[i].y));
 		}
 		else if (entity[i].type == 2)
 		{
