@@ -19,7 +19,6 @@ struct s_base
 	int		y; //y of base
 	int		heroes_count; //number of heroes
 	int		health; //health of base
-	int		mana; //mana of hero
 	int		e_x; //x of enemy base
 	int		e_y; //y of enemy base
 	int		corner; //0 if ally base is top left, 1 if ally base is bottom right
@@ -31,6 +30,7 @@ struct s_hero
 	int	id; //id of hero
 	int	x; //x of hero
 	int	y; //y of hero
+	int	mana; //mana of hero
 	int	shield_life; //shield_life of hero
 };
 
@@ -71,6 +71,26 @@ int	is_in_range(int target_x, int target_y, int mark_x, int mark_y, int radius)
 	if (distance <= 0)
 		return (1);
 	return (0);
+}
+
+float	get_distance(int target_x, int target_y, int mark_x, int mark_y, int radius)
+{
+	float	distance_sqrt;
+	float	distance;
+
+	distance_sqrt = sqrtf(square_distance(target_x, target_y, mark_x, mark_y));
+	distance = distance_sqrt - radius;
+	return (distance);
+}
+
+int	get_closest_to_base(t_base *base, t_entity *entity_one, t_entity *entity_two)
+{
+	float	distance_one = get_distance(entity_one->x, entity_one->y, base->x, base->y, 5000);
+	float	distance_two = get_distance(entity_two->x, entity_two->y, base->x, base->y, 5000);
+
+	if (distance_one <= distance_two)
+		return (entity_one->id);
+	return (entity_two->id);
 }
 
 int	move_to_base(t_base *base, int x, int y)
@@ -126,22 +146,33 @@ int	count_entity_in_range(t_base *base, t_entity *entity, int mark_x, int mark_y
 
 int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
 {
-	if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && base->mana >= 10)
+	int	idt = -1;
+
+	if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && hero->mana > 10)
 		return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 	for (int i = 0; i < base->entity_count; i++)
 	{
-		if (entity[i].type == 0)
+		if (entity[i].type == 0 && is_in_range(entity[i].x, entity[i].y, base->x, base->y, 5000))
 		{
-			if (is_in_range(entity[i].x + entity[i].vx, entity[i].y + entity[i].vy, base->x, base->y, 4000))
+			for (int j = 0; j < base->entity_count; j++)
 			{
-				if (is_in_range(entity[i].x + entity[i].vx, entity[i].y + entity[i].vy, base->x, base->y, 2500) && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && base->mana >= 10)
-					return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
-				return (printf("MOVE %d %d GRRR\n", entity[i].x + entity[i].vx, entity[i].y + entity[i].vy));
+				if (entity[j].type == 0 && is_in_range(entity[j].x, entity[j].y, base->x, base->y, 5000))
+				{
+					if (idt == -1)
+						idt = entity[j].id;
+					else
+						idt = get_closest_to_base(base, &entity[j], &entity[idt]);
+				}
 			}
+			if (entity[idt].type == 0 && is_in_range(entity[idt].x, entity[idt].y, base->x, base->y, 2500) && is_in_range(entity[idt].x, entity[idt].y, hero->x, hero->y, 1280) && hero->mana > 10)
+				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
+			else if (idt > -1 && entity[idt].type == 0)
+				return (printf("MOVE %d %d GRRRBBB\n", entity[idt].x, entity[idt].y));
+			return (printf("MOVE %d %d GRRRAAA\n", entity[i].x, entity[i].y));
 		}
 		else if (entity[i].type == 2)
 		{
-			if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && base->mana >= 10)
+			if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 		}
 	}
@@ -150,22 +181,33 @@ int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
 
 int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
 {
-	if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && base->mana >= 10)
+	int	idt = -1;
+
+	if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && hero->mana > 10)
 		return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 	for (int i = 0; i < base->entity_count; i++)
 	{
-		if (entity[i].type == 0)
+		if (entity[i].type == 0 && is_in_range(entity[i].x, entity[i].y, base->x, base->y, 5000))
 		{
-			if (is_in_range(entity[i].x + entity[i].vx, entity[i].y + entity[i].vy, base->x, base->y, 5000))
+			for (int j = 0; j < base->entity_count; j++)
 			{
-				if (is_in_range(entity[i].x + entity[i].vx, entity[i].y + entity[i].vy, base->x, base->y, 2500) && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && base->mana >= 10)
-					return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
-				return (printf("MOVE %d %d GRRR\n", entity[i].x + entity[i].vx, entity[i].y + entity[i].vy));
+				if (entity[j].type == 0 && is_in_range(entity[j].x, entity[j].y, base->x, base->y, 5000))
+				{
+					if (idt == -1)
+						idt = entity[j].id;
+					else
+						idt = get_closest_to_base(base, &entity[j], &entity[idt]);
+				}
 			}
+			if (is_in_range(entity[idt].x, entity[idt].y, base->x, base->y, 2500) && is_in_range(entity[idt].x, entity[idt].y, hero->x, hero->y, 1280) && hero->mana > 10)
+				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
+			else if (idt > -1 && entity[idt].type == 0)
+				return (printf("MOVE %d %d GRRRBBBB\n", entity[idt].x, entity[idt].y));
+			return (printf("MOVE %d %d GRRRAAA\n", entity[i].x, entity[i].y));
 		}
 		else if (entity[i].type == 2)
 		{
-			if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && base->mana >= 10)
+			if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 		}
 	}
@@ -174,31 +216,29 @@ int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
 
 int hero_two(t_base *base, t_entity *entity, t_hero *hero)
 {
-	if (!is_in_range(hero->x, hero->y, base->e_x, base->e_y, 8000))
-		return (move_to_enemy_base(base, 3500, 2500));
+	if (!is_in_range(hero->x, hero->y, base->e_x, base->e_y, 6000))
+		return (move_to_enemy_base(base, 3500, 3500));
 	for (int i = 0; i < base->entity_count; i++)
 	{
 		if (entity[i].type == 0)
 		{
-			if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && base->mana >= 10)
+			if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
-			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && base->mana >= 10)
+			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->e_x, base->e_y));
 			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 2200))
-				return (printf("MOVE %d %d GRRR\n", entity[i].x + entity[i].vx, entity[i].y + entity[i].vy));
+				return (printf("MOVE %d %d GRRR\n", entity[i].x, entity[i].y));
 		}
 		if (entity[i].type == 2)
 		{
-			if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && base->mana >= 10)
+			if (count_entity_in_range(base, entity, hero->x, hero->y, 1280) >= 2 && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->x, base->y));
-			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && base->mana >= 10)
+			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 1280) && hero->mana > 10)
 				return (printf("SPELL WIND %d %d OUAF\n", base->x, base->y));
 			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, 2200))
-				return (printf("MOVE %d %d GRRR\n", entity[i].x + entity[i].vx, entity[i].y + entity[i].vy));
+				return (printf("MOVE %d %d GRRR\n", entity[i].x, entity[i].y));
 		}
 	}
-	if (hero->shield_life > 0 && base->mana >= 10)
-		return (printf("SPELL SHIELD %d MEOW\n", hero->id));
 	return (move_to_enemy_base(base, 3500, 2500));
 }
 
@@ -229,7 +269,7 @@ int	main(void)
 		for (int i = 0; i < 2; i++)
 		{
 			hero[i].id = i;
-			scanf("%d%d", &base.health, &base.mana);
+			scanf("%d%d", &base.health, &hero[i].mana);
 		}
 		scanf("%d", &base.entity_count);
 		entity = malloc(sizeof(t_entity) * base.entity_count);
