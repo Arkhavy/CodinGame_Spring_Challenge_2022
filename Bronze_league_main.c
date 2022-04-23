@@ -59,34 +59,6 @@ struct s_pos
 	int		next_y;
 };
 
-void	init_heroes_position(t_base base, t_hero **hero)
-{
-	if (!base.corner)
-	{
-		hero[0]->pos.x = 1131;
-		hero[0]->pos.y = 1131;
-		hero[1]->pos.x = 1414;
-		hero[1]->pos.y = 849;
-		hero[2]->pos.x = 849;
-		hero[2]->pos.y = 1414;
-	}
-	else
-	{
-		hero[0]->pos.x = 16499;
-		hero[0]->pos.y = 7869;
-		hero[1]->pos.x = 16216;
-		hero[1]->pos.y = 8151;
-		hero[2]->pos.x = 16781;
-		hero[2]->pos.y = 7586;
-	}
-	hero[0]->pos.next_x = -1;
-	hero[0]->pos.next_y = -1;
-	hero[1]->pos.next_x = -1;
-	hero[1]->pos.next_y = -1;
-	hero[2]->pos.next_x = -1;
-	hero[2]->pos.next_y = -1;
-}
-
 void	init_base_position(t_base *base)
 {
 	if (base->x == 0 && base->y == 0)
@@ -103,6 +75,22 @@ void	init_base_position(t_base *base)
 	}
 	base->time = 0;
 	base->radius = 5000;
+}
+
+void	update_heroes_data(t_base base, t_hero *hero, t_entity entity)
+{
+	if (!base.time)
+	{
+		hero->id = entity.id;
+		hero->pos.vx = -1;
+		hero->pos.vy = -1;
+		hero->pos.next_x = -1;
+		hero->pos.next_y = -1;
+		hero->radius = 2200;
+	}
+	hero->pos.x = entity.pos.x;
+	hero->pos.y = entity.pos.y;
+	hero->shield_life = entity.shield_life;
 }
 
 int	main(void)
@@ -131,11 +119,7 @@ int	main(void)
 			scanf("%d%d", &entity[i].near_base, &entity[i].threat_for);
 			if (entity[i].type == 1)
 			{
-				hero[a].id = entity[i].id;
-				hero[a].pos.x = entity[i].pos.x;
-				hero[a].pos.y = entity[i].pos.y;
-				hero[a].shield_life = entity[i].shield_life;
-				hero[a].radius = 2200;
+				update_heroes_data(base, &hero[a], entity[i]);
 				a++;
 			}
 		}
