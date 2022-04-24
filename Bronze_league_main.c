@@ -12,10 +12,11 @@
 #define WIDTH 17630
 #define HEIGHT 9000
 #define WIND_RADIUS 1280
+#define MOVE_RADIUS 1600
 #define VIEW_RADIUS 2200
+#define PROBLEM_RADIUS 2500
 #define AGRO_RADIUS 5000
 #define MENACE_RADIUS 7500
-#define MOVE_RADIUS 1600
 
 /*/////////////////////////////////////////////////////////////////////////////
 		TYPEDEF & STRUCTURES
@@ -56,6 +57,7 @@ struct s_hero
 //t_entity	*entity = malloc(sizeof(t_entity) * base.entity_count);
 struct s_entity
 {
+	int		index; //index of entity in list
 	int		id; //entity id
 	int		type; //entity type : 0 = monster; 1 = ally hero; 2 = enemy hero
 	int		shield_life; //countdown for shield : 12 at start, -1 per turn; while > 0 = immune to spells
@@ -71,22 +73,11 @@ struct s_entity
 	int		ny; //pos x + vector y
 };
 
-int	count_entity_in_range(t_base *base, t_entity *entity, int mark_x, int mark_y, int radius)
-{
-	int	in_range = 0;
+/*/////////////////////////////////////////////////////////////////////////////
+		FUNCTIONS
+*//////////////////////////////////////////////////////////////////////////////
 
-	for (int i = 0; i < base->entity_count; i++)
-	{
-		if (entity[i].type == 0 || entity[i].type == 2)
-		{
-			if (is_in_range(entity[i].x, entity[i].y, mark_x, mark_y, radius))
-				in_range++;
-		}
-	}
-	return (in_range);
-}
-
-//Distance formula
+//Distance maths
 int	square(int nb)
 {
 	return (nb * nb);
@@ -110,6 +101,87 @@ int	is_in_range(int target_x, int target_y, int mark_x, int mark_y, int radius)
 		return (1);
 	return (0);
 }
+
+float	get_distance(int target_x, int target_y, int mark_x, int mark_y, int radius)
+{
+	float	distance;
+	float	distance_sqrt;
+
+	distance_sqrt = sqrtf(square_distance(target_x, target_y, mark_x, mark_y));
+	distance = distance_sqrt - radius;
+	return (distance);
+}
+
+int	get_index_closest_from_base(t_base *base, t_entity entity_one, t_entity entity_two)
+{
+	float	distance_one = get_distance(entity_one.nx, entity_one.ny, base->x, base->y, AGRO_RADIUS);
+	float	distance_two = get_distance(entity_two.nx, entity_two.ny, base->x, base->y, AGRO_RADIUS);
+
+	if (distance_one <= distance_two)
+		return (entity_one.index);
+	return (entity_two.index);
+}
+
+int	get_index_closest_from_hero(t_hero *hero, t_entity entity_one, t_entity entity_two)
+{
+	float	distance_one = get_distance(entity_one.nx, entity_one.ny, hero->x, hero->y, VIEW_RADIUS);
+	float	distance_two = get_distance(entity_two.nx, entity_two.ny, hero->x, hero->y, VIEW_RADIUS);
+
+	if (distance_one <= distance_two)
+		return (entity_one.index);
+	return (entity_two.index);
+}
+//////////////////////////////
+
+//Other functions
+int	count_entity_in_range(t_base *base, t_entity *entity, int mark_x, int mark_y, int radius)
+{
+	int	in_range = 0;
+
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 0 || entity[i].type == 2)
+		{
+			if (is_in_range(entity[i].x, entity[i].y, mark_x, mark_y, radius))
+				in_range++;
+		}
+	}
+	return (in_range);
+}
+
+int	get_target_closest_from_base(t_base *base, t_entity *entity)
+{
+	int	target = -1;
+
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 0 && (target == -1 || (is_in_range(entity[i].nx, entity[i].ny, base->x, base->y, AGRO_RADIUS))))
+		{
+			if (target == -1)
+				target = entity[i].index;
+			else
+				target = get_index_closest_from_base(base, entity[target], entity[i]);
+		}
+	}
+	return (target);
+}
+
+int	get_target_closest_from_hero(t_base *base, t_entity *entity, t_hero *hero)
+{
+	int	target = -1;
+
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 0 && (target == -1 || (is_in_range(entity[i].nx, entity[i].ny, hero->x, hero->y, VIEW_RADIUS))))
+		{
+			if (target == -1)
+				target = entity[i].index;
+			else
+				target = get_index_closest_from_hero(hero, entity[target], entity[i]);
+		}
+	}
+	return (target);
+}
 //////////////////////////////
 
 //Initialization of data
@@ -130,14 +202,16 @@ void	init_base_position(t_base *base)
 	base->time = 0;
 }
 
-void	update_heroes_data(t_base base, t_hero *hero, t_entity entity)
+void	update_heroes_data(t_base base, t_hero *hero, t_entity *entity)
 {
 	if (!base.time)
-		hero->id = entity.id;
-	hero->x = entity.x;
-	hero->y = entity.y;
-	hero->shield_life = entity.shield_life;
-	hero->is_controlled = entity.is_controlled;
+		hero->id = entity->id;
+	hero->x = entity->x;
+	hero->y = entity->y;
+	hero->shield_life = entity->shield_life;
+	hero->is_controlled = entity->is_controlled;
+	entity->nx = -1;
+	entity->ny = -1;
 }
 //////////////////////////////
 
@@ -166,48 +240,119 @@ int	spell_wind(t_base *base, int x, int y)
 	return (1);
 }
 
-int	spell_control(t_base *base, int id, int x, int y)
+int	spell_control(t_base *base, t_entity *entity, int x, int y)
 {
-	if (base->mana >= 10)
+	if (base->mana >= 10 && entity->type != 1)
 	{
 		base->mana -= 10;
-		return (printf("SPELL CONTROL %d %d %d WOLOLO\n", id, x, y));
+		entity->is_controlled = 1;
+		
+		return (printf("SPELL CONTROL %d %d %d WOLOLO\n", entity->id, x, y));
 	}
 	return (1);
 }
 
-int	spell_shield(t_base *base, int id)
+int	spell_shield(t_base *base, t_entity *entity, t_hero *hero)
 {
-	if (base->mana >= 10)
+	if (base->mana >= 10 && !entity->shield_life)
 	{
 		base->mana -= 10;
-		return (printf("SPELL SHIELD %d MEOW\n", id) * 0);
+		if (entity->type == 2)
+		{
+			hero->shield_life = 12;
+			return (printf("SPELL SHIELD %d MEOW\n", hero->id) * 0);
+		}
+		entity->shield_life = 12;
+		return (printf("SPELL SHIELD %d MEOW\n", entity->id) * 0);
 	}
 	return (1);
+}
+
+int	move_to_target(t_base *base, t_entity entity, t_hero *hero)
+{
+	// dprintf(2, "\nhero id = %d\n", hero->id);
+	// dprintf(2, "index = %d | id = %d | type = %d\n", entity.index, entity.id, entity.type);
+	// dprintf(2, "x = %d | y = %d | distance = %f\n", entity.x, entity.y, get_distance(entity.x, entity.y, base->x, base->y, AGRO_RADIUS));
+	// dprintf(2, "shield_life = %d | is_controlled = %d | health = %d\n", entity.shield_life, entity.is_controlled, entity.health);
+	// dprintf(2, "vx = %d | vy = %d\n", entity.vx, entity.vy);
+	// dprintf(2, "near_base = %d | threat_for = %d\n", entity.near_base, entity.threat_for);
+	// dprintf(2, "nx = %d | ny = %d\n", entity.nx, entity.ny);
+	return (printf("MOVE %d %d GRRR\n", entity.nx, entity.ny) * 0);
 }
 //////////////////////////////
 
-//Hero zero AI
-void	hero_zero(t_base *base, t_entity *entity, t_hero hero)
-{
+/*/////////////////////////////////////////////////////////////////////////////
+		HEROES
+*//////////////////////////////////////////////////////////////////////////////
 
+//Hero zero AI
+int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
+{
+	if (count_entity_in_range(base, entity, hero->x, hero->y, WIND_RADIUS) >= 2 && base->mana >= 10)
+		return (spell_wind(base, base->ex, base->ey));
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 2)
+		{
+			if (hero->shield_life == 0 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, VIEW_RADIUS) && base->mana >= 10 && base->emana >= 10)
+				return (spell_shield(base, &entity[i], hero));
+			else if (entity[i].shield_life == 0 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10)
+				return (spell_wind(base, base->ex, base->ey));
+		}
+		else if (entity[i].type == 0)
+		{
+			if (count_entity_in_range(base, entity, base->x, base->y, AGRO_RADIUS) >= 2)
+			{
+				int	target = get_target_closest_from_base(base, entity);
+				// dprintf(2, "target =  %d | id = %d\n", target, entity[target].id);
+				return (move_to_target(base, entity[target], hero));
+			}
+			else if (is_in_range(entity[i].nx, entity[i].ny, base->x, base->y, AGRO_RADIUS))
+				return (move_to_target(base, entity[i], hero));
+		}
+	}
+	return (move_to_base(base, 2500, 2500));
 }
 //////////////////////////////
 
 //Hero one AI
-void	hero_one(t_base *base, t_entity *entity, t_hero hero)
+int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
 {
-
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 2)
+		{
+			if (entity[i].shield_life == 0 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10)
+				return (spell_wind(base, base->ex, base->ey));
+		}
+		else if (entity[i].type == 0)
+		{
+			if (count_entity_in_range(base, entity, hero->x, hero->y, WIND_RADIUS) >= 2 && base->mana >= 10)
+				return (spell_wind(base, base->ex, base->ey));
+			else if (count_entity_in_range(base, entity, hero->x, hero->y, VIEW_RADIUS) >= 2)
+			{
+				int	target = get_target_closest_from_hero(base, entity, hero);
+				// dprintf(2, "target =  %d | id = %d\n", target, entity[target].id);
+				return (move_to_target(base, entity[target], hero));
+			}
+			else if (is_in_range(entity[i].nx, entity[i].ny, base->x, base->y, MENACE_RADIUS))
+				return (move_to_target(base, entity[i], hero));
+		}
+	}
+	return (move_to_base(base, 3500, 3500));
 }
 //////////////////////////////
 
 //Hero two AI
-void	hero_two(t_base *base, t_entity *entity, t_hero hero)
+int	hero_two(t_base *base, t_entity *entity, t_hero *hero)
 {
-
+	return (0);
 }
 //////////////////////////////
 
+/*/////////////////////////////////////////////////////////////////////////////
+		MAIN
+*//////////////////////////////////////////////////////////////////////////////
 
 int	main(void)
 {
@@ -248,33 +393,46 @@ int	main(void)
 			scanf("%d%d", &entity[i].near_base, &entity[i].threat_for);
 			// dprintf(2, "count %d | ", i);
 			// dprintf(2, "id = %d | type = %d | ", entity[i].id, entity[i].type);
-			// dprintf(2, "x = %d | y = %d | ", entity[i].x, entity[i].y);
+			// dprintf(2, "x = %d | y = %d | distance = %f | ", entity[i].x, entity[i].y, get_distance(entity[i].x, entity[i].y, base.x, base.y, AGRO_RADIUS));
 			// dprintf(2, "shield_life = %d | is_controlled = %d | health = %d | ", entity[i].shield_life, entity[i].is_controlled, entity[i].health);
 			// dprintf(2, "vx = %d | vy = %d | ", entity[i].vx, entity[i].vy);
 			// dprintf(2, "near_base = %d | threat_for = %d | ", entity[i].near_base, entity[i].threat_for);
+			entity[i].index = i;
 			if (entity[i].type == 1) //hero init
 			{
-				update_heroes_data(base, &hero[a], entity[i]);
+				update_heroes_data(base, &hero[a], &entity[i]);
 				a++;
-				// dprintf(2, "\n");
+				dprintf(2, "\n");
 			}
-			else
+			else if (entity[i].type == 0) //monster init nx ny
 			{
 				entity[i].nx = entity[i].x + entity[i].vx;
 				entity[i].ny = entity[i].y + entity[i].vy;
 				// dprintf(2, "nx = %d | ny = %d\n", entity[i].nx, entity[i].ny);
 			}
+			else //enemy hero init nx ny
+			{
+				entity[i].nx = -1;
+				entity[i].ny = -1;
+				// dprintf(2, "\n");
+			}
 		}
 		for (int i = 0; i < base.heroes_per_player; i++)
 		{
 			if (i == 0)
-				hero_zero(&base, entity, hero[0]);
+				hero_zero(&base, entity, &hero[0]);
 			else if (i == 1)
-				hero_one(&base, entity, hero[1]);
+			{
+				// printf("WAIT ZZZZ\n");
+				hero_one(&base, entity, &hero[1]);
+			}
 			else if (i == 2)
-				hero_two(&base, entity, hero[2]);
-			else
+			{
 				printf("WAIT ZZZZ\n");
+				// hero_two(&base, entity, &hero[2]);
+			}
+			else
+				move_to_base(&base, 3500, 3500);
 		}
 		free (entity);
 		base.time++;
