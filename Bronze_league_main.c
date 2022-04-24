@@ -406,8 +406,8 @@ int	main(void)
 		}
 		else
 		{
-			scanf("%d%d", &base.ehealth, &base.emana);
 			scanf("%d%d", &base.health, &base.mana);
+			scanf("%d%d", &base.ehealth, &base.emana);
 			// dprintf(2, "h = %d | m = %d | ", base.health, base.mana);
 			// dprintf(2, "eh = %d | em = %d\n", base.ehealth, base.emana);
 		}
