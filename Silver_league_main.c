@@ -34,8 +34,8 @@ struct s_master
 	int		entity_count; //number of visible entities
 	int		heroes_per_player; //number of heroes available per player
 	int		time; //number of turns since start : max = 220
-	t_base	ally; //ally base
-	t_base	enemy; //enemy base
+	t_base	*ally; //ally base
+	t_base	*enemy; //enemy base
 };
 
 struct s_base
@@ -59,7 +59,7 @@ struct s_entity
 	int		health; //current health of entity
 	int		near_base; //0 = not targeting a base; 1 = targeting a base
 	int		threat_for; //depending on trajectory : 0 = not a threat; 1 = threat for ally base; 2 = threat for enemy base
-	t_pos	pos; //pos of entity
+	t_pos	*pos; //pos of entity
 };
 
 struct s_pos
@@ -95,19 +95,19 @@ struct s_pos
 *//////////////////////////////////////////////////////////////////////////////
 void	init_base_position(t_master *master)
 {
-	if (master->ally.x == 0 && master->ally.y == 0)
+	if (master->ally->x == 0 && master->ally->y == 0)
 	{
-		master->enemy.x = WIDTH;
-		master->enemy.y = HEIGHT;
-		master->ally.corner = 0;
-		master->enemy.corner = 1;
+		master->enemy->x = WIDTH;
+		master->enemy->y = HEIGHT;
+		master->ally->corner = 0;
+		master->enemy->corner = 1;
 	}
 	else
 	{
-		master->enemy.x = 0;
-		master->enemy.y = 0;
-		master->ally.corner = 1;
-		master->enemy.corner = 0;
+		master->enemy->x = 0;
+		master->enemy->y = 0;
+		master->ally->corner = 1;
+		master->enemy->corner = 0;
 	}
 	master->time = 0;
 }
@@ -118,16 +118,16 @@ void	init_entity_next_pos(t_entity *entity)
 	{
 		for (int i = 0; i < 5; i++)
 		{
-			entity->pos.nx[i] = entity->pos.x + (entity->pos.vx * (i + 1));
-			entity->pos.ny[i] = entity->pos.y + (entity->pos.vy * (i + 1));
+			entity->pos->nx[i] = entity->pos->x + (entity->pos->vx * (i + 1));
+			entity->pos->ny[i] = entity->pos->y + (entity->pos->vy * (i + 1));
 		}
 	}
 	else
 	{
 		for (int i = 0; i < 5; i++)
 		{
-			entity->pos.nx[i] = -1;
-			entity->pos.ny[i] = -1;
+			entity->pos->nx[i] = -1;
+			entity->pos->ny[i] = -1;
 		}
 	}
 }
@@ -142,38 +142,50 @@ int	main(void)
 	int			a;
 	int			b;
 
-	scanf("%d%d%d", &master.ally.x, &master.ally.y, &master.heroes_per_player);
+	master.ally = malloc(sizeof(t_base));
+	master.enemy = malloc(sizeof(t_base));
+	scanf("%d%d%d", &master.ally->x, &master.ally->y, &master.heroes_per_player);
 	init_base_position(&master);
 	while (42)
 	{
 		a = 0;
 		b = 0;
-		scanf("%d%d", &master.ally.health, &master.ally.mana);
-		scanf("%d%d", &master.enemy.health, &master.enemy.mana);
+		scanf("%d%d", &master.ally->health, &master.ally->mana);
+		scanf("%d%d", &master.enemy->health, &master.enemy->mana);
 		scanf("%d", &master.entity_count);
 		entity = malloc(sizeof(t_entity) * master.entity_count);
 		for (int i = 0; i < master.entity_count; i++)
 		{
 			entity[i].index = i;
+			entity[i].pos = malloc(sizeof(t_pos));
 			scanf("%d%d", &entity[i].id, &entity[i].type);
-			scanf("%d%d", &entity[i].pos.x, &entity[i].pos.y);
+			scanf("%d%d", &entity[i].pos->x, &entity[i].pos->y);
 			scanf("%d%d%d", &entity[i].shield_life, &entity[i].is_controlled, &entity[i].health);
-			scanf("%d%d", &entity[i].pos.vx, &entity[i].pos.vy);
+			scanf("%d%d", &entity[i].pos->vx, &entity[i].pos->vy);
 			scanf("%d%d", &entity[i].near_base, &entity[i].threat_for);
 			init_entity_next_pos(&entity[i]);
 			if (entity[i].type == 1)
 			{
-				master.ally.h_index[a] = entity[i].index;
-				master.ally.h_id[a] = entity[i].id;
+				master.ally->h_index[a] = entity[i].index;
+				master.ally->h_id[a] = entity[i].id;
 				a++;
 			}
 			else if (entity[i].type == 2)
 			{
-				master.enemy.h_index[b] = entity[i].index;
-				master.enemy.h_id[b] = entity[i].id;
+				master.enemy->h_index[b] = entity[i].index;
+				master.enemy->h_id[b] = entity[i].id;
 				b++;
 			}
 		}
+		for (int i = 0; i < master.heroes_per_player; i++)
+		{
+			printf("WAIT\n");
+		}
+		for (int i = 0; i < master.entity_count; i++)
+			free (entity[i].pos);
+		free (entity);
 	}
+	free (master.ally);
+	free (master.enemy);
 	return (0);
 }
