@@ -77,6 +77,71 @@ struct s_entity
 		FUNCTIONS
 *//////////////////////////////////////////////////////////////////////////////
 
+//Instructions
+int	move_to_base(t_base *base, int x, int y)
+{
+	if (!base->corner)
+		return (printf("MOVE %d %d GRAOU\n", base->x + x, base->y + y) * 0);
+	return (printf("MOVE %d %d GRAOU\n", base->x - x, base->y - y) * 0);
+}
+
+int	move_to_enemy_base(t_base *base, int x, int y)
+{
+	if (!base->corner)
+		return (printf("MOVE %d %d GRAOU\n", base->ex - x, base->ey - y) * 0);
+	return (printf("MOVE %d %d GRAOU\n", base->ex + x, base->ey + y) * 0);
+}
+
+int	spell_wind(t_base *base, int x, int y)
+{
+	if (base->mana >= 10)
+	{
+		base->mana -= 10;
+		return (printf("SPELL WIND %d %d OUAF\n", x, y) * 0);
+	}
+	return (1);
+}
+
+int	spell_control(t_base *base, t_entity *entity, int x, int y)
+{
+	if (base->mana >= 10 && entity->type != 1)
+	{
+		base->mana -= 10;
+		entity->is_controlled = 1;
+		return (printf("SPELL CONTROL %d %d %d WOLOLO\n", entity->id, x, y));
+	}
+	return (1);
+}
+
+int	spell_shield(t_base *base, t_entity *entity, t_hero *hero)
+{
+	if (base->mana >= 10 && !entity->shield_life)
+	{
+		base->mana -= 10;
+		if (entity->type == 2)
+		{
+			hero->shield_life = 12;
+			return (printf("SPELL SHIELD %d MEOW\n", hero->id) * 0);
+		}
+		entity->shield_life = 12;
+		return (printf("SPELL SHIELD %d MEOW\n", entity->id) * 0);
+	}
+	return (1);
+}
+
+int	move_to_target(t_base *base, t_entity entity, t_hero *hero)
+{
+	// dprintf(2, "\nhero id = %d\n", hero->id);
+	// dprintf(2, "index = %d | id = %d | type = %d\n", entity.index, entity.id, entity.type);
+	// dprintf(2, "x = %d | y = %d | distance = %f\n", entity.x, entity.y, get_distance(entity.x, entity.y, base->x, base->y, AGRO_RADIUS));
+	// dprintf(2, "shield_life = %d | is_controlled = %d | health = %d\n", entity.shield_life, entity.is_controlled, entity.health);
+	// dprintf(2, "vx = %d | vy = %d\n", entity.vx, entity.vy);
+	// dprintf(2, "near_base = %d | threat_for = %d\n", entity.near_base, entity.threat_for);
+	// dprintf(2, "nx = %d | ny = %d\n", entity.nx, entity.ny);
+	return (printf("MOVE %d %d GRRR\n", entity.nx, entity.ny) * 0);
+}
+//////////////////////////////
+
 //Distance maths
 int	square(int nb)
 {
@@ -168,7 +233,7 @@ int	main(void)
 		scanf("%d%d", &base.ehealth, &base.emana);
 		scanf("%d", base.entity_count);
 		entity = malloc(sizeof(t_entity) * base.entity_count);
-		for (int i = 0; i < base.entity_count; i++)
+		for (int i = 0; i < base.entity_count; i++) //entity init
 		{
 			scanf("%d%d", &entity[i].id, &entity[i].type);
 			scanf("%d%d", &entity[i].x, &entity[i].y);
@@ -176,12 +241,12 @@ int	main(void)
 			scanf("%d%d", &entity[i].vx, &entity[i].vy);
 			scanf("%d%d", &entity[i].near_base, &entity[i].threat_for);
 			entity[i].index = i;
-			if (entity[i].type == 1)
+			if (entity[i].type == 1) //ally heroes init
 			{
 				update_heroes_data(base, &hero[a], &entity[i]);
 				a++;
 			}
-			else if (entity[i].type == 0)
+			else if (entity[i].type == 0) //monster init
 			{
 				for (int j = 0; j < 5; j++)
 				{
@@ -189,7 +254,7 @@ int	main(void)
 					entity[i].ny[j] = entity[i].y + (entity[i].vy * (j + 1));
 				}
 			}
-			else
+			else //enemy heroes init
 			{
 				for (int j = 0; j < 5; j++)
 				{
@@ -198,5 +263,15 @@ int	main(void)
 				}
 			}
 		}
+		if (hero_zero(&base, entity, &hero[0]))
+			move_to_base(&base, 5000, 1000);
+		if (hero_one(&base, entity, &hero[1]))
+			move_to_base(&base, 3500, 2500);
+		if (hero_two(&base, entity, &hero[2]))
+			move_to_base(&base, 1000, 5000);
+		free (entity);
+		base.time++;
 	}
+	free (hero);
+	return (0);
 }
