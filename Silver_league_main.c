@@ -137,11 +137,8 @@ int	count_entity_in_range(t_base *base, t_entity *entity, int mark_x, int mark_y
 
 	for (int i = 0; i < base->entity_count; i++)
 	{
-		if (entity[i].type == 0 || entity[i].type == 2)
-		{
-			if (is_in_range(entity[i].x, entity[i].y, mark_x, mark_y, radius))
-				in_range++;
-		}
+		if (entity[i].type == 0 && is_in_range(entity[i].x, entity[i].y, mark_x, mark_y, radius))
+			in_range++;
 	}
 	return (in_range);
 }
@@ -184,7 +181,7 @@ int	get_target_closest_from_hero(t_base *base, t_entity *entity, t_hero *hero)
 		FUNCTIONS
 *//////////////////////////////////////////////////////////////////////////////
 
-//Instructions
+//Instructions need to be reworked
 int	move_to_base(t_base *base, int x, int y, char *str)
 {
 	if (!base->corner)
@@ -215,7 +212,7 @@ int	spell_control(t_base *base, t_entity *entity, int x, int y, char *str)
 	{
 		base->mana -= 10;
 		entity->is_controlled = 1;
-		return (printf("SPELL CONTROL %d %d %d %s\n", entity->id, x, y, str));
+		return (printf("SPELL CONTROL %d %d %d %s\n", entity->id, x, y, str) * 0);
 	}
 	return (1);
 }
@@ -246,6 +243,22 @@ int	move_to_target(t_base *base, t_entity entity, t_hero *hero, char *str)
 	// dprintf(2, "near_base = %d | threat_for = %d\n", entity.near_base, entity.threat_for);
 	// dprintf(2, "nx = %d | ny = %d\n", entity.nx, entity.ny);
 	return (printf("MOVE %d %d %s\n", entity.nx, entity.ny, str) * 0);
+}
+
+//routines
+int	farm_routine(t_base *base, t_entity *entity, t_hero *hero)
+{
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 0)
+		{
+			if (count_entity_in_range(base, entity, base->x, base->y, MENACE_RADIUS) >= 2)
+			{
+				int	target = get_target_closest_from_base(base, entity);
+			}
+		}
+	}
+	return (1);
 }
 
 /*/////////////////////////////////////////////////////////////////////////////
@@ -288,7 +301,45 @@ void	update_heroes_data(t_base base, t_hero *hero, t_entity *entity)
 		HEROES
 *//////////////////////////////////////////////////////////////////////////////
 
+int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
+{
+	if (base->time < 50)
+	{
+		if (farm_routine(base, entity, hero))
+			return (1);
+	}
+	else
+	{
 
+	}
+	return (1);
+}
+
+int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
+{
+	if (base->time < 50)
+	{
+
+	}
+	else
+	{
+
+	}
+	return (1);
+}
+
+int	hero_two(t_base *base, t_entity *entity, t_hero *hero)
+{
+	if (base->time < 50)
+	{
+
+	}
+	else
+	{
+
+	}
+	return (1);
+}
 
 /*/////////////////////////////////////////////////////////////////////////////
 		MAIN
