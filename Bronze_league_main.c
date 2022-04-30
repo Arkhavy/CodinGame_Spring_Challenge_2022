@@ -397,20 +397,10 @@ int	main(void)
 	while (42)
 	{
 		a = 0;
-		if (!base.corner) //base init
-		{
-			scanf("%d%d", &base.health, &base.mana);
-			scanf("%d%d", &base.ehealth, &base.emana);
-			// dprintf(2, "h = %d | m = %d | ", base.health, base.mana);
-			// dprintf(2, "eh = %d | em = %d\n", base.ehealth, base.emana);
-		}
-		else
-		{
-			scanf("%d%d", &base.health, &base.mana);
-			scanf("%d%d", &base.ehealth, &base.emana);
-			// dprintf(2, "h = %d | m = %d | ", base.health, base.mana);
-			// dprintf(2, "eh = %d | em = %d\n", base.ehealth, base.emana);
-		}
+		scanf("%d%d", &base.health, &base.mana);
+		scanf("%d%d", &base.ehealth, &base.emana);
+		// dprintf(2, "h = %d | m = %d | ", base.health, base.mana);
+		// dprintf(2, "eh = %d | em = %d\n", base.ehealth, base.emana);
 		scanf("%d", &base.entity_count);
 		// dprintf(2, "entity count = %d\n", base.entity_count);
 		entity = malloc(sizeof(t_entity) * base.entity_count);
