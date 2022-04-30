@@ -14,7 +14,7 @@
 #define WIND_RADIUS 1280
 #define MOVE_RADIUS 1600
 #define VIEW_RADIUS 2200
-#define PROBLEM_RADIUS 2500
+#define PROBLEM_RADIUS 3500
 #define AGRO_RADIUS 5000
 #define MENACE_RADIUS 7200
 
@@ -70,6 +70,13 @@ struct s_entity
 	int		vy; //vector y of entity
 	int		nx; //pos x + vector x
 	int		ny; //pos x + vector y
+	int		in_problem; //distance from ally base : negative if in range; positive if not in range
+	int		in_agro; //distance from ally base : negative if in range; positive if not in range
+	int		in_menace; //distance from ally base : negative if in range; positive if not in range
+	int		in_e_problem; //distance from enemy base : negative if in range; positive if not in range
+	int		in_e_agro; //distance from enemy base : negative if in range; positive if not in range
+	int		in_e_menace; //distance from enemy base : negative if in range; positive if not in range
+
 };
 
 /*/////////////////////////////////////////////////////////////////////////////
@@ -217,6 +224,12 @@ void	update_heroes_data(t_hero *hero, t_entity *entity)
 	hero->is_controlled = entity->is_controlled;
 	entity->nx = -1;
 	entity->ny = -1;
+	entity->in_problem = -1;
+	entity->in_agro = -1;
+	entity->in_menace = -1;
+	entity->in_e_problem = -1;
+	entity->in_e_agro = -1;
+	entity->in_e_menace = -1;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////
@@ -258,13 +271,13 @@ int	spell_wind(t_base *base, int x, int y, char *str)
 	return (1);
 }
 
-int	spell_control(t_base *base, t_entity *entity, int x, int y, char *str)
+int	spell_control(t_base *base, t_entity entity, int x, int y, char *str)
 {
-	if (base->mana >= 10 && entity->type != 1)
+	if (base->mana >= 10 && entity.type != 1)
 	{
 		base->mana = base->mana - 10;
 		dprintf(2, "ACTION %s\n", str);
-		printf("SPELL CONTROL %d %d %d WOLOLO\n", entity->id, x, y);
+		printf("SPELL CONTROL %d %d %d %s\n", entity.id, x, y, str);
 		return (0);
 	}
 	return (1);
@@ -282,7 +295,7 @@ int	spell_shield(t_base *base, t_entity entity, char *str)
 	return (1);
 }
 
-int	move_to_target(t_base *base, t_entity entity, t_hero *hero, char *str)
+int	move_to_target(t_entity entity, char *str)
 {
 	// dprintf(2, "\nhero id = %d\n", hero->id);
 	// dprintf(2, "index = %d | id = %d | type = %d\n", entity.index, entity.id, entity.type);
@@ -304,16 +317,24 @@ int	farm_routine(t_base *base, t_entity *entity, t_hero *hero)
 {
 	int	target = -1;
 
-	if (count_entity_in_range(base, entity, base->x, base->y, AGRO_RADIUS) >= 2)
+	if (count_entity_in_range(base, entity, base->x, base->y, MENACE_RADIUS) >= 2)
 		target = get_target_closest_from_base(base, entity);
 	else
 	{
 		target = get_target_closest_from_base(base, entity);
-		if (target == -1 || !is_in_range(entity[target].x, entity[target].y, hero->x, hero->y, MOVE_RADIUS))
+		if (target == -1 || !is_in_range(entity[target].x, entity[target].y, hero->x, hero->y, VIEW_RADIUS))
 			target = get_target_closest_from_hero(base, entity, hero);
 	}
-	if (target != -1)
-		return (move_to_target(base, entity[target], hero, "GRRR"));
+	if (target != -1 && (is_in_range(entity[target].x, entity[target].y, hero->x, hero->y, VIEW_RADIUS) || is_in_range(entity[target].x, entity[target].y, base->x, base->y, AGRO_RADIUS)))
+		return (move_to_target(entity[target], "GRRR"));
+	for (int i = 0; i < base->entity_count; i++)
+	{
+		if (entity[i].type == 0)
+		{
+			if (is_in_range(entity[i].nx, entity[i].ny, base->x, base->y, MENACE_RADIUS) && entity[i].threat_for == 1)
+				return (move_to_target(entity[i], "GRRR"));
+		}
+	}
 	return (1);
 }
 
@@ -324,32 +345,32 @@ int	patrol_routine(t_base *base, t_entity *entity, t_hero *hero)
 
 	// dprintf(2, "entity_count %d | mana %d | hx %d | hy %d\n", base->entity_count, base->mana, hero->x, hero->y);
 	// dprintf(2, "bx %d | by %d | bex %d | bey %d\n", base->x, base->y, base->ex, base->ey);
-	if (count_entity_in_range(base, entity, hero->x, hero->y, WIND_RADIUS) >= 2 && base->mana >= 10)
+	if (base->time > 75 && count_entity_in_range(base, entity, hero->x, hero->y, WIND_RADIUS) >= 2 && base->mana >= 10)
 		return (spell_wind(base, base->ex, base->ey, "OUAF"));
 	for (int i = 0; i < base->entity_count; i++)
 	{
 		// dprintf(2, "entity id %d | entity type %d | entity x %d | entity y %d\n", entity[i].id, entity[i].type, entity[i].x, entity[i].y);
 		if (entity[i].type == 0)
 		{
-			if (entity[i].threat_for == 2 || is_in_range(entity[i].x, entity[i].y, base->ex, base->ey, MENACE_RADIUS))
+			if (entity[i].threat_for == 2 || entity[i].in_e_menace > 0)
 			{
-				if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10)
-					return (spell_wind(base, base->ex, base->ey, "OUAF2"));
+				if (base->time > 75 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10)
+					return (spell_wind(base, base->ex, base->ey, "OUAF"));
 				else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, VIEW_RADIUS))
-					return (move_to_target(base, entity[i], hero, "BLBL"));
+					return (move_to_target(entity[i], "AGROU"));
 			}
 		}
 		if (entity[i].type == 2)
 		{
-			if (entity[i].shield_life == 0 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10)
+			if (base->time > 75 && entity[i].shield_life == 0 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10)
 				return (spell_wind(base, base->x, base->y, "OUST"));
-			else if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, MOVE_RADIUS) && base->mana >= 10)
+			else if (base->time > 75 && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, MOVE_RADIUS) && base->mana >= 10)
 				return (spell_shield(base, entity[hero->index], "MEOW"));
 		}
 	}
 	target = get_target_closest_from_hero(base, entity, hero);
 	if (target != -1 && is_in_range(entity[target].x, entity[target].y, hero->x, hero->y, VIEW_RADIUS))
-		return (move_to_target(base, entity[target], hero, "GRAOU"));
+		return (move_to_target(entity[target], "GRAOU"));
 	return (1);
 }
 
@@ -360,15 +381,49 @@ int	patrol_routine(t_base *base, t_entity *entity, t_hero *hero)
 //Hero zero AI
 int	hero_zero(t_base *base, t_entity *entity, t_hero *hero)
 {
+	int	target = -1;
+
 	if (base->time < 50)
 		return (farm_routine(base, entity, hero));
+	else
+	{
+		if (count_entity_in_range(base, entity, hero->x, hero->y, WIND_RADIUS) >= 2 && base->mana >= 10)
+			return (spell_wind(base, base->ex, base->ey, "OUAF"));
+		for (int i = 0; i < base->entity_count; i++)
+		{
+			if (entity[i].type == 0)
+			{
+				if (is_in_range(entity[i].x, entity[i].y, base->x, base->y, PROBLEM_RADIUS))
+				{
+					if (is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, WIND_RADIUS) && base->mana >= 10 && entity[i].shield_life == 0)
+						return (spell_wind(base, base->ex, base->ey, "AAAAA"));
+					target = get_target_closest_from_base(base, entity);
+					if (target != -1 && entity[target].threat_for == 1)
+						return (move_to_target(entity[target], "GRAA"));
+					return (move_to_target(entity[i], "GRRR"));
+				}
+				else if (count_entity_in_range(base, entity, base->x, base->y, AGRO_RADIUS) >= 2)
+				{
+					target = get_target_closest_from_base(base, entity);
+					if (target != -1 && entity[target].threat_for == 1)
+						return (move_to_target(entity[target], "GRRR"));
+				}
+				else if (!is_in_range(entity[i].x, entity[i].y, base->x, base->y, AGRO_RADIUS) && is_in_range(entity[i].x, entity[i].y, hero->x, hero->y, VIEW_RADIUS) && entity[i].shield_life == 0 && base->mana >= 10 && entity[i].threat_for != 2)
+					return (spell_control(base, entity[i], base->ex, base->ey, "WOLOLO"));
+				else if (is_in_range(entity[i].x, entity[i].y, base->x, base->y, MENACE_RADIUS))
+					return (move_to_target(entity[i], "GRRR"));
+			}
+		}
+	}
 	return (1);
 }
 
 //Hero one AI
 int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
 {
-	if (base->time < 50)
+	int	target = -1;
+
+	if (base->time < 100)
 		return (farm_routine(base, entity, hero));
 	return (1);
 }
@@ -376,8 +431,7 @@ int	hero_one(t_base *base, t_entity *entity, t_hero *hero)
 //Hero two AI
 int	hero_two(t_base *base, t_entity *entity, t_hero *hero)
 {
-	if (!patrol_routine(base, entity, hero))
-		return (0);
+	return (patrol_routine(base, entity, hero));
 	return (1);
 }
 
@@ -401,9 +455,9 @@ int	main(void)
 		scanf("%d%d", &base.health, &base.mana);
 		scanf("%d%d", &base.ehealth, &base.emana);
 		scanf("%d", &base.entity_count);
-		dprintf(2, "h = %d | m = %d | ", base.health, base.mana);
-		dprintf(2, "eh = %d | em = %d\n", base.ehealth, base.emana);
-		dprintf(2, "entity count = %d\n\n", base.entity_count);
+		// dprintf(2, "h = %d | m = %d | ", base.health, base.mana);
+		// dprintf(2, "eh = %d | em = %d\n", base.ehealth, base.emana);
+		// dprintf(2, "entity count = %d\n\n", base.entity_count);
 		entity = malloc(sizeof(t_entity) * base.entity_count);
 		for (int i = 0; i < base.entity_count; i++) //entity init
 		{
@@ -422,11 +476,23 @@ int	main(void)
 			{
 				entity[i].nx = entity[i].x + entity[i].vx;
 				entity[i].ny = entity[i].y + entity[i].vy;
+				entity[i].in_problem = get_distance(entity[i].x, entity[i].y, base.x, base.y, PROBLEM_RADIUS);
+				entity[i].in_agro = get_distance(entity[i].x, entity[i].y, base.x, base.y, AGRO_RADIUS);
+				entity[i].in_menace = get_distance(entity[i].x, entity[i].y, base.x, base.y, MENACE_RADIUS);
+				entity[i].in_e_problem = get_distance(entity[i].x, entity[i].y, base.ex, base.ey, PROBLEM_RADIUS);
+				entity[i].in_e_agro = get_distance(entity[i].x, entity[i].y, base.ex, base.ey, AGRO_RADIUS);
+				entity[i].in_e_menace = get_distance(entity[i].x, entity[i].y, base.ex, base.ey, MENACE_RADIUS);
 			}
 			else //enemy hero init nx ny
 			{
 				entity[i].nx = -1;
 				entity[i].ny = -1;
+				entity[i].in_problem = -1;
+				entity[i].in_agro = -1;
+				entity[i].in_menace = -1;
+				entity[i].in_e_problem = -1;
+				entity[i].in_e_agro = -1;
+				entity[i].in_e_menace = -1;
 			}
 			// dprintf(2, "count %d | ", i);
 			// dprintf(2, "id = %d | type = %d | ", entity[i].id, entity[i].type);
