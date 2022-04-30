@@ -483,7 +483,7 @@ int	hero_two(t_base *base, t_entity *entity, t_hero *hero)
 	else
 	{
 		if (!is_in_range(hero->x, hero->y, base->ex, base->ey, AGRO_RADIUS))
-			return (move_to_enemy_base(base, 5000, 1000, "GRRR"));
+			return (move_to_enemy_base(base, 4500, 1000, "GRRR"));
 		for (int i = 0; i < base->entity_count; i++)
 		{
 			if (entity[i].type == 0)
@@ -567,7 +567,7 @@ int	main(void)
 		if (hero_one(&base, entity, &hero[1]))
 			move_to_base(&base, 2300, 6000, "ZZZ1");
 		if (hero_two(&base, entity, &hero[2]))
-			move_to_enemy_base(&base, 7000, 1000, "ZZZ2");
+			move_to_enemy_base(&base, 2200, 7000, "ZZZ2");
 		free (entity);
 		base.time++;
 	} //loop end
